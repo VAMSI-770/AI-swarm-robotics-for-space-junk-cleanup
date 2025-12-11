@@ -1,0 +1,116 @@
+int cameraPin = 2;            // Junk detection signal input
+int radarPin = 4;             // Distance sensor
+int proximityPin = 5;         // Collision avoid sensor
+
+int thrusterLeft = 12;
+int thrusterRight = 13;
+
+int magnetPin = 14;           // Electromagnet ON/OFF
+Servo claw;                   // Robotic Claw
+
+// -------- Global Variables --------
+bool junkDetected = false;
+bool junkCollected = false;
+bool returningToMother = false;
+
+// -------- Setup --------
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(cameraPin, INPUT);
+  pinMode(radarPin, INPUT);
+  pinMode(proximityPin, INPUT);
+
+  pinMode(thrusterLeft, OUTPUT);
+  pinMode(thrusterRight, OUTPUT);
+
+  pinMode(magnetPin, OUTPUT);
+  claw.attach(15);
+
+  Serial.println("Robot System Initialised.");
+}
+
+// -------- Movement Functions --------
+void moveForward() {
+  digitalWrite(thrusterLeft, HIGH);
+  digitalWrite(thrusterRight, HIGH);
+}
+
+void stopMovement() {
+  digitalWrite(thrusterLeft, LOW);
+  digitalWrite(thrusterRight, LOW);
+}
+
+// -------- Junk Collection Logic --------
+void detectJunk() {
+  if (digitalRead(cameraPin) == HIGH) {
+    junkDetected = true;
+    Serial.println("Junk Detected.");
+  }
+}
+
+void collectJunk() {
+  Serial.println("Approaching Junk...");
+  moveForward();
+  delay(2000);
+  stopMovement();
+
+  Serial.println("Activating Magnet...");
+  digitalWrite(magnetPin, HIGH);
+  
+  Serial.println("Closing Claw...");
+  claw.write(0);
+  delay(1000);
+
+  junkCollected = true;
+  digitalWrite(magnetPin, HIGH);
+  Serial.println("Junk Successfully Collected.");
+}
+
+void returnToMotherStation() {
+  returningToMother = true;
+  Serial.println("Returning to Mother Station...");
+
+  moveForward();
+  delay(3000);
+  stopMovement();
+
+  Serial.println("Reached Mother Station.");
+}
+
+void dropJunk() {
+  Serial.println("Releasing Junk...");
+  
+  digitalWrite(magnetPin, LOW);
+  claw.write(90);
+  
+  junkCollected = false;
+  returningToMother = false;
+
+  Serial.println("Junk Delivered for Reuse.");
+}
+
+// -------- Main Loop --------
+void loop() {
+
+  // 1) Detect Junk
+  detectJunk();
+
+  // 2) If junk detected → Collect
+  if (junkDetected && !junkCollected) {
+    collectJunk();
+  }
+
+  // 3) After collecting → Return back
+  if (junkCollected && !returningToMother) {
+    returnToMotherStation();
+  }
+
+  // 4) At mother station → Drop junk
+  if (returningToMother) {
+    dropJunk();
+    junkDetected = false;
+  }
+
+  delay(500);
+}
